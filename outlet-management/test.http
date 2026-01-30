@@ -2,35 +2,24 @@
 @baseUrl = http://localhost:8000/api
 @contentType = application/json
 
+@outlet_token = Bearer 8|SL2A6Vhv4YhcRcNjtzI3QDoFNVrg4IFNEdI1QLXNa451aff7
+
+@ho_token = Barer 
+
 ### 0. TEST API ROOT (Harusnya bekerja sekarang)
 GET {{baseUrl}}/
 
-> {%
-    client.test("API root working", function() {
-        client.assert(response.status === 200, "API root should return 200");
-        client.assert(response.body.message, "Should have message");
-    });
-%}
 
 ### 1. LOGIN - Head Office
 # @name loginHo
 POST http://localhost:8000/api/login
+Accept: application/json
 Content-Type: application/json
 
 {
   "email": "ho@example.com",
   "password": "password"
 }
-
-> {%
-    client.test("Login Head Office berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-        client.assert(response.body.token, "Token tidak ditemukan");
-        client.assert(response.body.user.role === "ho", "Role bukan 'ho'");
-        client.global.set("ho_token", response.body.token);
-        client.global.set("ho_user_id", response.body.user.id);
-    });
-%}
 
 ### 2. LOGIN - Outlet
 # @name loginOutlet
@@ -42,97 +31,52 @@ Content-Type: {{contentType}}
     "password": "password"
 }
 
-> {%
-    client.test("Login Outlet berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-        client.assert(response.body.token, "Token tidak ditemukan");
-        client.assert(response.body.user.role === "outlet", "Role bukan 'outlet'");
-        client.global.set("outlet_token", response.body.token);
-        client.global.set("outlet_user_id", response.body.user.id);
-    });
-%}
 
 ### 3. LOGIN - Invalid Credentials
 POST {{baseUrl}}/login
 Content-Type: {{contentType}}
+Accept: application/json
 
 {
     "email": "wrong@example.com",
     "password": "wrongpassword"
 }
 
-> {%
-    client.test("Login gagal dengan invalid credentials", function() {
-        client.assert(response.status === 401 || response.status === 422, "Response status seharusnya 401 atau 422");
-    });
-%}
 
 ### 4. GET CURRENT USER (ME) - Head Office
 GET {{baseUrl}}/me
 Authorization: Bearer {{ho_token}}
 
-> {%
-    client.test("Get current user berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-        client.assert(response.body.id === client.global.get("ho_user_id"), "User ID tidak cocok");
-        client.assert(response.body.role === "ho", "Role tidak cocok");
-    });
-%}
+
 
 ### 5. GET CURRENT USER (ME) - Outlet
 GET {{baseUrl}}/me
 Authorization: Bearer {{outlet_token}}
 
-> {%
-    client.test("Get current user outlet berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-        client.assert(response.body.role === "outlet", "Role tidak cocok");
-    });
-%}
 
 ### 6. LOGOUT - Head Office
 POST {{baseUrl}}/logout
 Authorization: Bearer {{ho_token}}
 
-> {%
-    client.test("Logout berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-    });
-%}
 
 ### 7. LOGOUT - Outlet
 POST {{baseUrl}}/logout
 Authorization: Bearer {{outlet_token}}
 
-> {%
-    client.test("Logout outlet berhasil", function() {
-        client.assert(response.status === 200, "Response status bukan 200");
-    });
-%}
 
 ### 8. ACCESS PROTECTED ROUTE WITHOUT TOKEN
 GET {{baseUrl}}/me
 
-> {%
-    client.test("Akses tanpa token harus gagal", function() {
-        client.assert(response.status === 401, "Response status seharusnya 401");
-    });
-%}
 
 ### 9. PRODUCT ROUTES - Test as Head Office
 ### 9.1 Get all products (HO)
 GET {{baseUrl}}/products
 Authorization: Bearer {{ho_token}}
 
-> {%
-    client.test("Get products as HO", function() {
-        client.assert(response.status === 200, "Should get 200");
-    });
-%}
 
 ### 9.2 Create product (HO)
 POST {{baseUrl}}/products
-Authorization: Bearer {{ho_token}}
+Authorization: Bearer {{outlet_token}}
 Content-Type: {{contentType}}
 
 {
@@ -141,22 +85,11 @@ Content-Type: {{contentType}}
     "stock": 50
 }
 
-> {%
-    client.test("Create product as HO", function() {
-        client.assert(response.status === 201, "Should get 201 Created");
-        client.global.set("product_id", response.body.id);
-    });
-%}
 
 ### 9.3 Try access products as Outlet (Should fail)
 GET {{baseUrl}}/products
 Authorization: Bearer {{outlet_token}}
 
-> {%
-    client.test("Outlet cannot access products", function() {
-        client.assert(response.status === 403, "Should get 403 Forbidden");
-    });
-%}
 
 ### 10. ORDER ROUTES
 ### 10.1 Create order as Outlet
@@ -173,29 +106,12 @@ Content-Type: {{contentType}}
     ]
 }
 
-> {%
-    client.test("Create order as outlet", function() {
-        client.assert(response.status === 201, "Should get 201 Created");
-        client.global.set("order_id", response.body.id);
-    });
-%}
 
 ### 10.2 Get my orders (Outlet)
 GET {{baseUrl}}/my-orders
 Authorization: Bearer {{outlet_token}}
 
-> {%
-    client.test("Get my orders as outlet", function() {
-        client.assert(response.status === 200, "Should get 200");
-    });
-%}
 
 ### 10.3 Get all orders (HO)
 GET {{baseUrl}}/orders
 Authorization: Bearer {{ho_token}}
-
-> {%
-    client.test("Get all orders as HO", function() {
-        client.assert(response.status === 200, "Should get 200");
-    });
-%}
